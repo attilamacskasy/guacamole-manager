@@ -1,12 +1,54 @@
-# Byte-compiled / optimized / DLL files
+# Environment and Configuration Files
+.env
+.env.local
+.env.production
+config.ini
+*.key
+*.pem
+*.crt
+
+# Docker and Container Files
+docker-compose.override.yml
+.dockerignore
+
+# Database Files
+*.sql
+*.dump
+*.backup
+
+# Logs
+*.log
+logs/
+/volume1/guacamole/home/nginx-logs/
+
+# Backup Files
+/volume1/guacamole/backups/
+backups/
+*.tar.gz
+*.zip
+*.bak
+
+# SSL Certificates
+ssl/
+config/nginx/ssl/
+
+# Temporary Files
+tmp/
+temp/
+.tmp
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python Files
 __pycache__/
-*.py[codz]
+*.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/

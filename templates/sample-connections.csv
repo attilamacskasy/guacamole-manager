@@ -1,0 +1,7 @@
+name,protocol,hostname,username,password,domain,port,description
+Windows Server 2022 - DC01,rdp,192.168.1.100,administrator,AdminPass123,MYDOMAIN,3389,Primary Domain Controller
+Windows Server 2022 - FS01,rdp,192.168.1.101,administrator,AdminPass123,MYDOMAIN,3389,File Server
+Windows 10 VDI - User01,rdp,192.168.1.110,user01,UserPass123,MYDOMAIN,3389,Virtual Desktop for User01
+Windows 10 VDI - User02,rdp,192.168.1.111,user02,UserPass123,MYDOMAIN,3389,Virtual Desktop for User02
+Ubuntu Desktop 22.04,vnc,192.168.1.120,,VncPass123,,5900,Ubuntu Linux Desktop
+CentOS Stream 9,vnc,192.168.1.121,,VncPass123,,5901,CentOS Linux Desktop
