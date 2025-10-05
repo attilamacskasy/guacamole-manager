@@ -7,16 +7,16 @@ services:
     image: postgres:15
     restart: unless-stopped
     environment:
-      POSTGRES_DB: guacamole_db
-      POSTGRES_USER: guacamole_user
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/guacamole
     volumes:
-      - /volume1/guacamole/db:/var/lib/postgresql/data
-      - /volume1/guacamole/dbinit:/docker-entrypoint-initdb.d:ro
+      - ${FOLDER_DB}:/var/lib/postgresql/data
+      - ${FOLDER_DBINIT}:/docker-entrypoint-initdb.d:ro
     networks:
       guacamole-net:
-        ipv4_address: 172.22.18.10
+        ipv4_address: ${DB_IP}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U guacamole_user -d guacamole_db"]
       interval: 30s
@@ -27,29 +27,29 @@ services:
   # Guacamole Daemon (guacd)
   guacd:
     container_name: guacamole-daemon
-    image: guacamole/guacd:1.5.4
+    image: guacamole/guacd:${GUACAMOLE_VERSION}
     restart: unless-stopped
     volumes:
-      - /volume1/guacamole/home/drive:/srv/guacamole
-      - /volume1/guacamole/home/record:/var/lib/guacamole/recordings
+      - ${FOLDER_DRIVE}:/srv/guacamole
+      - ${FOLDER_RECORD}:/var/lib/guacamole/recordings
     networks:
       guacamole-net:
-        ipv4_address: 172.22.18.11
+        ipv4_address: ${GUACD_IP}
 
   # Guacamole Web Application
   guacamole:
     container_name: guacamole-web
-    image: guacamole/guacamole:1.5.4
+    image: guacamole/guacamole:${GUACAMOLE_VERSION}
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${GUACAMOLE_PORT}:8080"
     environment:
       GUACD_HOSTNAME: guacd
-      GUACD_PORT: 4822
+      GUACD_PORT: ${GUACD_PORT}
       POSTGRES_HOSTNAME: guacamole-db
-      POSTGRES_PORT: 5432
-      POSTGRES_DATABASE: guacamole_db
-      POSTGRES_USER: guacamole_user
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DATABASE: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # Optional: LDAP/AD integration
       LDAP_HOSTNAME: ${LDAP_HOSTNAME:-}
@@ -60,11 +60,11 @@ services:
       # Enable extensions
       EXTENSION_PRIORITY: postgresql,ldap
     volumes:
-      - /volume1/guacamole/home:/home/guacamole
-      - /volume1/guacamole/home/extensions:/opt/guacamole/extensions
+      - ${FOLDER_HOME}:/home/guacamole
+      - ${FOLDER_EXTENSIONS}:/opt/guacamole/extensions
     networks:
       guacamole-net:
-        ipv4_address: 172.22.18.12
+        ipv4_address: ${GUACAMOLE_IP}
     depends_on:
       guacamole-db:
         condition: service_healthy
@@ -77,15 +77,15 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "${HTTP_PORT}:80"
+      - "${HTTPS_PORT}:443"
     volumes:
       - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./config/nginx/ssl:/etc/nginx/ssl:ro
-      - /volume1/guacamole/home/nginx-logs:/var/log/nginx
+      - ${FOLDER_NGINX_LOGS}:/var/log/nginx
     networks:
       guacamole-net:
-        ipv4_address: 172.22.18.13
+        ipv4_address: ${NGINX_IP}
     depends_on:
       - guacamole
 
@@ -93,11 +93,11 @@ networks:
   guacamole-net:
     driver: macvlan
     driver_opts:
-      parent: ovs_eth2
+      parent: ${PARENT_INTERFACE}
     ipam:
       config:
-        - subnet: 172.22.18.0/24
-          gateway: 172.22.18.1
+        - subnet: ${GUACAMOLE_SUBNET}
+          gateway: ${GUACAMOLE_GATEWAY}
 
 volumes:
   guacamole-db-data:
@@ -105,11 +105,11 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /volume1/guacamole/db
+      device: ${FOLDER_DB}
   
   guacamole-home:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /volume1/guacamole/home
+      device: ${FOLDER_HOME}

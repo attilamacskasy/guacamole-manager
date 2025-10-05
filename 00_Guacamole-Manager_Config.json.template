@@ -1,0 +1,64 @@
+{
+  "_comment": "Guacamole Manager Configuration Template - Copy this to 00_Guacamole-Manager_Config.json and customize for your environment",
+  "deployment": {
+    "synology": {
+      "ip_address": "192.168.1.100",
+      "ssh_username": "your-admin-user",
+      "ssh_port": 22,
+      "base_path": "/volume1/guacamole",
+      "docker_path": "/usr/local/bin/docker",
+      "docker_compose_path": "/usr/local/bin/docker-compose"
+    },
+    "network": {
+      "subnet": "172.22.18.0/24",
+      "gateway": "172.22.18.1",
+      "db_ip": "172.22.18.10",
+      "guacd_ip": "172.22.18.11", 
+      "guacamole_ip": "172.22.18.12",
+      "nginx_ip": "172.22.18.13",
+      "parent_interface": "ovs_eth2"
+    },
+    "folders": {
+      "db": "/volume1/guacamole/db",
+      "dbinit": "/volume1/guacamole/dbinit",
+      "home": "/volume1/guacamole/home",
+      "drive": "/volume1/guacamole/home/drive",
+      "record": "/volume1/guacamole/home/record", 
+      "extensions": "/volume1/guacamole/home/extensions",
+      "nginx_logs": "/volume1/guacamole/home/nginx-logs",
+      "deploy": "/volume1/guacamole/deploy"
+    }
+  },
+  "database": {
+    "name": "guacamole_db",
+    "username": "guacamole_user",
+    "password": "your_secure_postgres_password_here",
+    "_password_note": "Keep as 'your_secure_postgres_password_here' to enable secure interactive password prompting",
+    "port": 5432
+  },
+  "guacamole": {
+    "version": "1.5.4",
+    "port": 8080,
+    "default_admin_username": "guacadmin",
+    "default_admin_password": "guacadmin"
+  },
+  "ldap": {
+    "enabled": false,
+    "hostname": "your-ad-server.domain.com",
+    "port": 389,
+    "user_base_dn": "CN=Users,DC=yourdomain,DC=com",
+    "username_attribute": "sAMAccountName",
+    "group_base_dn": "CN=Users,DC=yourdomain,DC=com"
+  },
+  "ssl": {
+    "enabled": false,
+    "cert_path": "./config/nginx/ssl/cert.pem",
+    "key_path": "./config/nginx/ssl/key.pem"
+  },
+  "ports": {
+    "http": 80,
+    "https": 443,
+    "guacamole": 8080,
+    "guacd": 4822
+  }
+}

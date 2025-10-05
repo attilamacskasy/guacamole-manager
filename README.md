@@ -2,6 +2,17 @@
 
 A comprehensive tool for deploying and managing Apache Guacamole as a VDI (Virtual Desktop Infrastructure) solution on Synology NAS using Docker Compose. This toolkit provides **fully automated deployment** from an Ubuntu VM in the same network, designed for CI/CD workflows and self-hosted GitHub workflow runners.
 
+## Centralized Configuration System
+
+All deployment-specific parameters are now managed through **`00_Guacamole-Manager_Config.json`**, providing a single source of truth for:
+- Synology NAS connection details (IP, SSH credentials, paths)
+- Network configuration (subnets, IPs, interface settings)
+- Database and authentication settings
+- Folder structure and Docker container versions
+- LDAP/SSL configuration options
+
+This eliminates hardcoded values across scripts and enables easy environment management.
+
 ## Automated Deployment Scripts
 
 This toolkit includes three sequential automation scripts for complete hands-free deployment:
@@ -15,18 +26,22 @@ This toolkit includes three sequential automation scripts for complete hands-fre
 - **Purpose**: Configure remote Docker access to Synology NAS via SSH
 - **Function**: Sets up secure SSH-based Docker command execution
 - **Features**: 
-  - Interactive credential collection with defaults
-  - Remote Docker validation and testing
+  - Loads configuration from JSON file automatically
+  - SSH connection validation using configured parameters
+  - Remote Docker and folder structure validation
   - Python virtual environment creation
   - Clean CLI experience with debug mode option
+- **Usage**: `./02_setup-guacamole-manager.sh [--skip-install] [--debug] [--config CONFIG_FILE]`
 
 ### **Script 03**: `03_deploy-guacamole-stack.sh`
 - **Purpose**: Deploy complete Guacamole stack to Synology NAS
 - **Function**: Validates environment, creates folder structure, deploys containers
 - **Features**:
-  - Synology shared folder validation and creation
+  - Configuration-driven deployment (no hardcoded values)
+  - Automatic .env file generation from JSON configuration
   - Docker Compose file transfer and deployment
   - Container status monitoring and health checks
+- **Usage**: `./03_deploy-guacamole-stack.sh`
 
 ## 🎯 Use Cases
 
@@ -60,29 +75,80 @@ The deployment consists of the following services:
 - Internet access for package downloads
 - SSH client capabilities
 
+## Configuration Setup
+
+### 1. Configure Deployment Parameters
+
+Edit `00_Guacamole-Manager_Config.json` to match your environment:
+
+```json
+{
+  "deployment": {
+    "synology": {
+      "ip_address": "172.22.22.253",     // Your Synology IP
+      "ssh_username": "your-username",    // SSH user with admin privileges
+      "ssh_port": 22,
+      "base_path": "/volume1/guacamole"   // Shared folder path
+    },
+    "network": {
+      "subnet": "172.22.18.0/24",        // Available subnet for containers
+      "gateway": "172.22.18.1",          // Network gateway
+      "parent_interface": "ovs_eth2"      // Synology network interface
+    }
+  },
+  "database": {
+    "password": "your_secure_postgres_password_here"  // Leave as-is for security prompting
+  }
+}
+```
+
+**Important**: 
+- Update the `ip_address` to match your Synology NAS IP
+- Change the `ssh_username` to your Synology admin user
+- **Database Password Security**: Leave `database.password` as the default placeholder `"your_secure_postgres_password_here"`. The scripts will automatically detect this and prompt you to enter a secure password interactively, preventing passwords from being stored in configuration files.
+- Verify the `network.subnet` doesn't conflict with existing networks
+
+**Security Feature**: When `database.password` is set to the default placeholder value, all scripts will prompt you to enter a secure database password interactively. This ensures passwords are never stored in plaintext in configuration files.
+
 ## Quick Start - Automated Deployment
 
 ### Step 1: Initial Setup
 ```bash
 git clone https://github.com/attilamacskasy/guacamole-manager.git
 cd guacamole-manager
+
+# Set execute permissions on all scripts
+./00_Setup_Permissions.sh
 ```
 
-### Step 2: Configure Remote Docker Access
+### Step 2: Configure and Validate
 ```bash
-./02_setup-guacamole-manager.sh
+# Edit configuration file first!
+nano 00_Guacamole-Manager_Config.json
+
+# Validate configuration
+./01B_Validate_Config.sh
 ```
-- Enter Synology IP, username, and SSH credentials
-- Script validates connection and sets up remote Docker access
+
+### Step 3: Setup Remote Docker Access
+```bash
+# Run setup script (installs dependencies, configures SSH Docker access)
+./02_Setup_Guacamole-Manager.sh
+```
+- Loads configuration from JSON file automatically
+- Prompts for SSH password and database password (if using default)
+- Validates SSH connection and sets up remote Docker access
 - Creates Python virtual environment with dependencies
 
-### Step 3: Deploy Guacamole Stack
+### Step 4: Deploy Guacamole Stack
 ```bash
-./03_deploy-guacamole-stack.sh
+./03_Deploy-Guacamole-Stack.sh
 ```
-- Validates Synology environment and folder structure
-- Creates required directories automatically
+- Loads configuration and validates prerequisites
+- Generates .env file from JSON configuration
+- Transfers Docker Compose files to Synology NAS
 - Deploys complete Guacamole stack via Docker Compose
+- Provides access URLs and management commands
 
 ### Step 4: Access Guacamole
 ```
