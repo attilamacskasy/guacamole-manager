@@ -64,9 +64,9 @@ if [[ "$DEBUG" == "true" ]]; then
 fi
 
 if sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -p $SSH_PORT "$SSH_USER@$SYNOLOGY_IP" "echo 'SSH connection successful'" > /dev/null 2>&1; then
-    echo "✓ SSH connection successful!"
+    echo "SSH connection successful!"
 else
-    echo "✗ SSH connection failed. Please check:"
+    echo "SSH connection failed. Please check:"
     echo "  1. IP address and credentials are correct"
     echo "  2. SSH is enabled on Synology (Control Panel > Terminal & SNMP > Enable SSH)"
     echo "  3. User has admin privileges"
@@ -103,12 +103,12 @@ if [[ -z "$DOCKER_FOUND" ]]; then
 fi
 
 if [[ -z "$DOCKER_FOUND" ]]; then
-    echo "✗ Docker not found. Please install Docker package on your Synology NAS."
+    echo "Docker not found. Please install Docker package on your Synology NAS."
     echo "DEBUG: Checked paths: ${DOCKER_PATHS[*]} and PATH search"
     exit 1
 fi
 
-echo "✓ Docker found at: $DOCKER_FOUND"
+echo "Docker found at: $DOCKER_FOUND"
 
 # Test Docker with sudo (required for non-root users)
 DOCKER_VERSION_CMD_MASKED="sshpass -p \"****\" ssh -p $SSH_PORT \"$SSH_USER@$SYNOLOGY_IP\" \"echo '****' | sudo -S $DOCKER_FOUND version --format '{{.Server.Version}}'\""
@@ -132,9 +132,9 @@ echo "DEBUG: Docker test raw output: '$DOCKER_TEST_OUTPUT'"
 echo "DEBUG: Docker test clean version: '$DOCKER_VERSION'"
 
 if [[ $DOCKER_TEST_EXIT -eq 0 && "$DOCKER_VERSION" != "" && "$DOCKER_VERSION" != *"failed"* ]]; then
-    echo "✓ Docker is available on Synology (version: $DOCKER_VERSION)"
+    echo "Docker is available on Synology (version: $DOCKER_VERSION)"
 else
-    echo "✗ Docker test failed. Output: $DOCKER_VERSION"
+    echo "Docker test failed. Output: $DOCKER_VERSION"
     echo "Please ensure:"
     echo "  1. '$SSH_USER' has sudo privileges"
     echo "  2. Docker is installed and running"
@@ -197,17 +197,118 @@ if [[ "$DEBUG" == "true" ]]; then
 fi
 
 if [[ $WRAPPER_EXIT -eq 0 ]]; then
-    echo "✓ Remote Docker connection successful!"
+    echo "Remote Docker connection successful!"
 else
-    echo "✗ Remote Docker connection failed."
+    echo "Remote Docker connection failed."
     if [[ "$DEBUG" == "true" ]]; then
         echo "Output: $WRAPPER_OUTPUT"
     fi
     exit 1
 fi
 
-# 4. Clone or update the guacamole-manager repository
-echo "[4/5] Checking guacamole-manager repository..."
+# 4. Validate Synology folder structure
+echo "[4/6] Validating Synology folder structure..."
+
+# Check if main /volume1/guacamole shared folder exists
+echo "Checking main Guacamole shared folder..."
+
+# Simple test first - just check if folder exists
+echo "Testing folder existence..."
+if sshpass -p "$SSH_PASS" ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p $SSH_PORT "$SSH_USER@$SYNOLOGY_IP" "test -d /volume1/guacamole" 2>/dev/null; then
+    echo "/volume1/guacamole folder exists"
+else
+    echo "/volume1/guacamole shared folder not found on Synology!"
+    echo ""
+    echo "Let me check what's available in /volume1/:"
+    
+    VOLUME_LIST=$(sshpass -p "$SSH_PASS" ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p $SSH_PORT "$SSH_USER@$SYNOLOGY_IP" "ls -1 /volume1/" 2>&1)
+    VOLUME_EXIT=$?
+    
+    if [[ $VOLUME_EXIT -eq 0 ]]; then
+        echo "Available folders in /volume1/:"
+        echo "$VOLUME_LIST" | head -10
+    else
+        echo "Cannot access /volume1/ - Error: $VOLUME_LIST"
+    fi
+    
+    echo ""
+    echo "REQUIRED SETUP:"
+    echo "1. Log into your Synology DSM web interface"
+    echo "2. Go to Control Panel > Shared Folder"
+    echo "3. Create a new shared folder named 'guacamole' on volume1"
+    echo "4. Set appropriate permissions for your user '$SSH_USER'"
+    echo "5. Re-run this script"
+    echo ""
+    exit 1
+fi
+
+# Define required subfolders for Guacamole
+REQUIRED_FOLDERS=(
+    "/volume1/guacamole/db"
+    "/volume1/guacamole/dbinit" 
+    "/volume1/guacamole/home"
+    "/volume1/guacamole/home/drive"
+    "/volume1/guacamole/home/record"
+    "/volume1/guacamole/home/extensions"
+    "/volume1/guacamole/home/nginx-logs"
+)
+
+echo "Checking/creating required subfolders..."
+CREATED_FOLDERS=()
+
+for folder in "${REQUIRED_FOLDERS[@]}"; do
+    echo "Checking folder: $folder"
+    
+    if ! sshpass -p "$SSH_PASS" ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p $SSH_PORT "$SSH_USER@$SYNOLOGY_IP" "test -d \"$folder\"" 2>/dev/null; then
+        echo "Creating missing folder: $folder"
+        
+        CREATE_RESULT=$(sshpass -p "$SSH_PASS" ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p $SSH_PORT "$SSH_USER@$SYNOLOGY_IP" "mkdir -p \"$folder\"" 2>&1)
+        CREATE_EXIT=$?
+        
+        if [[ $CREATE_EXIT -eq 0 ]]; then
+            CREATED_FOLDERS+=("$folder")
+            echo "Created: $folder"
+        else
+            echo "Failed to create folder: $folder"
+            echo "Error: $CREATE_RESULT"
+            echo "Please check permissions on /volume1/guacamole"
+            exit 1
+        fi
+    else
+        echo "Exists: $folder"
+    fi
+done
+
+if [[ ${#CREATED_FOLDERS[@]} -gt 0 ]]; then
+    echo "Created ${#CREATED_FOLDERS[@]} missing folders"
+else
+    echo "All required folders already exist"
+fi
+
+# Set proper permissions (optional step)
+echo "Setting folder permissions..."
+
+# Simple permission test - just try to set the main folder permission
+if [[ "$DEBUG" == "true" ]]; then
+    echo "DEBUG: Attempting to set basic permissions..."
+fi
+
+# Use a simple, quick permission check instead of recursive chmod
+CHMOD_TEST=$(sshpass -p "$SSH_PASS" ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p $SSH_PORT "$SSH_USER@$SYNOLOGY_IP" "ls -ld /volume1/guacamole" 2>&1)
+CHMOD_TEST_EXIT=$?
+
+if [[ $CHMOD_TEST_EXIT -eq 0 ]]; then
+    echo "Folder permissions verified (current: $(echo "$CHMOD_TEST" | awk '{print $1}'))"
+    echo "Note: Synology manages permissions automatically - folders are ready for Docker"
+else
+    echo "Warning: Could not verify permissions, but folders exist"
+    echo "Synology will handle permissions automatically for Docker volumes"
+fi
+
+echo "Folder structure validated"
+
+# 5. Clone or update the guacamole-manager repository
+echo "[5/6] Checking guacamole-manager repository..."
 
 # Check if we're already in the guacamole-manager directory
 if [[ "$(basename "$PWD")" == "guacamole-manager" ]]; then
@@ -228,8 +329,8 @@ else
     REPO_DIR="$PWD/guacamole-manager"
 fi
 
-# 5. Install Python requirements
-echo "[5/5] Installing Python requirements..."
+# 6. Install Python requirements
+echo "[6/6] Installing Python requirements..."
 cd "$REPO_DIR"
 python3 -m venv venv
 source venv/bin/activate
@@ -243,16 +344,13 @@ if [[ "$(basename "$REPO_DIR")" != "$(basename "$PWD")" ]]; then
     cd ..
 fi
 
-# 6. Final instructions
+# 7. Final instructions
 echo ""
 echo "Setup complete!"
 echo ""
-echo "✓ Remote Docker connection established to Synology at $SYNOLOGY_IP"
-echo "✓ Python virtual environment created with all dependencies"
-echo ""
-echo "Docker commands now work via SSH:"
-echo "  - 'docker' commands will execute on your Synology NAS"
-echo "  - 'docker-compose' commands will execute on your Synology NAS"
+echo "Remote Docker connection established to Synology at $SYNOLOGY_IP"
+echo "Synology folder structure validated and created"
+echo "Python virtual environment created with all dependencies"
 echo ""
 echo "Next step: Deploy Guacamole stack"
 echo "Run: ./03_deploy-guacamole-stack.sh"

@@ -80,18 +80,18 @@ echo "Step 5: Performing health checks..."
 # Check database
 echo "Checking database connection..."
 if docker exec guacamole-postgres pg_isready -U guacamole_user -d guacamole_db; then
-    echo "✓ Database is ready"
+    echo "Database is ready"
 else
-    echo "✗ Database connection failed"
+    echo "Database connection failed"
 fi
 
 # Check Guacamole web interface
 echo "Checking Guacamole web interface..."
 sleep 10
 if curl -f -s "http://172.22.18.12:8080/guacamole/" > /dev/null; then
-    echo "✓ Guacamole web interface is accessible"
+    echo "Guacamole web interface is accessible"
 else
-    echo "✗ Guacamole web interface is not accessible"
+    echo "Guacamole web interface is not accessible"
 fi
 
 # Step 6: Display access information

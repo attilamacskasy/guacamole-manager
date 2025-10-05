@@ -2,7 +2,7 @@
 
 A comprehensive tool for deploying and managing Apache Guacamole as a VDI (Virtual Desktop Infrastructure) solution on Synology NAS using Docker Compose. This toolkit provides **fully automated deployment** from an Ubuntu VM in the same network, designed for CI/CD workflows and self-hosted GitHub workflow runners.
 
-## 🚀 Automated Deployment Scripts
+## Automated Deployment Scripts
 
 This toolkit includes three sequential automation scripts for complete hands-free deployment:
 
@@ -60,7 +60,7 @@ The deployment consists of the following services:
 - Internet access for package downloads
 - SSH client capabilities
 
-## 🚀 Quick Start - Automated Deployment
+## Quick Start - Automated Deployment
 
 ### Step 1: Initial Setup
 ```bash
