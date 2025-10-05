@@ -1,20 +1,42 @@
 # Apache Guacamole Manager
 
-A comprehensive tool for deploying and managing Apache Guacamole as a VDI (Virtual Desktop Infrastructure) solution on Synology NAS using Docker Compose. This tool is specifically designed for managing Windows Servers and virtualized desktops through Guacamole's web-based remote desktop gateway.
+A comprehensive tool for deploying and managing Apache Guacamole as a VDI (Virtual Desktop Infrastructure) solution on Synology NAS using Docker Compose. This toolkit provides **fully automated deployment** from an Ubuntu VM in the same network, designed for CI/CD workflows and self-hosted GitHub workflow runners.
 
-## Features
+## 🚀 Automated Deployment Scripts
 
-- **Easy Deployment**: One-command deployment on Synology NAS with Container Manager and Portainer
-- **Network Optimization**: Pre-configured for macvlan-ovs_eth2 with custom subnet (172.22.18.0/24)
-- **VDI Management**: Specialized tools for managing Windows servers and virtual desktops
-- **Database Management**: PostgreSQL with automated initialization and backup/restore
-- **Connection Management**: CLI and Python tools for bulk connection management
-- **SSL Ready**: Nginx reverse proxy with SSL/TLS support
-- **Active Directory Integration**: Optional LDAP/AD authentication
-- **Session Recording**: Built-in session recording capabilities
-- **Automated Backups**: Scheduled backup and restore functionality
+This toolkit includes three sequential automation scripts for complete hands-free deployment:
 
-## Architecture
+### **Script 01**: `01_setup-guacamole-manager.sh` *(Coming Soon)*
+- **Purpose**: Initial Ubuntu VM preparation and dependency installation
+- **Function**: Installs all required packages, Docker, Python dependencies
+- **Target**: Fresh Ubuntu 24.04 desktop/server installations
+
+### **Script 02**: `02_setup-guacamole-manager.sh`
+- **Purpose**: Configure remote Docker access to Synology NAS via SSH
+- **Function**: Sets up secure SSH-based Docker command execution
+- **Features**: 
+  - Interactive credential collection with defaults
+  - Remote Docker validation and testing
+  - Python virtual environment creation
+  - Clean CLI experience with debug mode option
+
+### **Script 03**: `03_deploy-guacamole-stack.sh`
+- **Purpose**: Deploy complete Guacamole stack to Synology NAS
+- **Function**: Validates environment, creates folder structure, deploys containers
+- **Features**:
+  - Synology shared folder validation and creation
+  - Docker Compose file transfer and deployment
+  - Container status monitoring and health checks
+
+## 🎯 Use Cases
+
+- **Local Development**: Quick VDI deployment for testing and development
+- **CI/CD Integration**: Automated deployment from GitHub Actions or GitLab CI
+- **Self-Hosted Runners**: Deploy from GitHub self-hosted workflow runners
+- **Network-Isolated Deployment**: Ubuntu VM → Synology NAS in same network
+- **Repeatable Infrastructure**: Version-controlled, scriptable deployments
+
+## 🏗️ Architecture
 
 The deployment consists of the following services:
 
@@ -23,53 +45,145 @@ The deployment consists of the following services:
 - **Guacamole Web App** (172.22.18.12) - Web-based management interface
 - **Nginx Reverse Proxy** (172.22.18.13) - SSL termination and load balancing
 
-## Prerequisites
+## 📋 Prerequisites
 
-- Synology NAS with Docker support
-- Container Manager or Portainer.io installed
+### Synology NAS
+- Synology NAS with Docker package installed
+- SSH access enabled (Control Panel → Terminal & SNMP → Enable SSH)
+- User account with admin/sudo privileges
 - Network: macvlan-ovs_eth2 configured
-- Storage: /volume1/guacamole directory prepared
 - Subnet: 172.22.18.0/24 available
 
-## Quick Start
+### Ubuntu VM (Deployment Machine)
+- Ubuntu 24.04 LTS (desktop or server)
+- Network connectivity to Synology NAS
+- Internet access for package downloads
+- SSH client capabilities
 
-### 1. Clone and Configure
+## 🚀 Quick Start - Automated Deployment
 
+### Step 1: Initial Setup
 ```bash
-git clone <repository-url>
+git clone https://github.com/attilamacskasy/guacamole-manager.git
 cd guacamole-manager
-cp .env.example .env
 ```
 
-Edit `.env` file with your settings:
+### Step 2: Configure Remote Docker Access
 ```bash
-# Required: Set a secure PostgreSQL password
-POSTGRES_PASSWORD=your_secure_password_here
-
-# Optional: Active Directory integration
-LDAP_HOSTNAME=your-ad-server.domain.com
-LDAP_USER_BASE_DN=CN=Users,DC=yourdomain,DC=com
-LDAP_USERNAME_ATTRIBUTE=sAMAccountName
+./02_setup-guacamole-manager.sh
 ```
+- Enter Synology IP, username, and SSH credentials
+- Script validates connection and sets up remote Docker access
+- Creates Python virtual environment with dependencies
 
-### 2. Deploy with One Command
-
+### Step 3: Deploy Guacamole Stack
 ```bash
-./deploy.sh
+./03_deploy-guacamole-stack.sh
+```
+- Validates Synology environment and folder structure
+- Creates required directories automatically
+- Deploys complete Guacamole stack via Docker Compose
+
+### Step 4: Access Guacamole
+```
+Web Interface: http://YOUR_SYNOLOGY_IP:8080/guacamole
+Default Login: guacadmin / guacadmin
 ```
 
-This script will:
-- Create necessary Synology directories
-- Initialize the PostgreSQL database
-- Start all Docker services
-- Perform health checks
-- Display access information
+## �️ Advanced Usage
 
-### 3. Access Guacamole
+### Skip Package Installation (Subsequent Runs)
+```bash
+# Skip Ubuntu package installation if already done
+./02_setup-guacamole-manager.sh --skip-install
 
-- **URL**: http://172.22.18.12:8080/guacamole/
-- **Username**: `guacadmin`
-- **Password**: `guacadmin` (change after first login)
+# Enable debug output for troubleshooting  
+./02_setup-guacamole-manager.sh --skip-install --debug
+```
+
+### CI/CD Integration Examples
+
+#### GitHub Actions Workflow
+```yaml
+name: Deploy Guacamole to Synology
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux]  # Your Ubuntu runner
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Environment
+        run: ./02_setup-guacamole-manager.sh --skip-install
+        env:
+          SSH_PASS: ${{ secrets.SYNOLOGY_PASSWORD }}
+      - name: Deploy Stack  
+        run: ./03_deploy-guacamole-stack.sh
+```
+
+#### GitLab CI Pipeline
+```yaml
+stages:
+  - deploy
+
+deploy_guacamole:
+  stage: deploy
+  tags:
+    - ubuntu-runner
+  script:
+    - ./02_setup-guacamole-manager.sh --skip-install
+    - ./03_deploy-guacamole-stack.sh
+  only:
+    - main
+```
+
+### Environment Variables
+Set these for non-interactive deployment:
+```bash
+export SYNOLOGY_IP="172.22.22.253"
+export SSH_USER="admin"  
+export SSH_PASS="your_password"
+export SSH_PORT="22"
+```
+
+## 📂 Required Synology Setup
+
+### Create Shared Folder
+1. **DSM Web Interface** → **Control Panel** → **Shared Folder**
+2. **Create** new folder named **`guacamole`** on **volume1**
+3. **Set permissions** for your SSH user account
+4. **Enable SSH** in **Control Panel** → **Terminal & SNMP**
+
+### Folder Structure (Auto-Created)
+```
+/volume1/guacamole/
+├── db/                    # PostgreSQL data
+├── dbinit/               # Database initialization scripts
+├── home/                 # Guacamole home directory
+│   ├── drive/            # File sharing storage  
+│   ├── record/           # Session recordings
+│   ├── extensions/       # Guacamole extensions
+│   └── nginx-logs/       # Web server logs
+└── deploy/               # Docker Compose files (auto-created)
+```
+
+## 🌐 Network Configuration
+
+### Synology Network Setup
+- **Interface**: ovs_eth2 (macvlan)
+- **Subnet**: 172.22.18.0/24
+- **Gateway**: 172.22.18.1
+
+### Service IP Addresses
+- **PostgreSQL**: 172.22.18.10:5432
+- **Guacamole Daemon**: 172.22.18.11:4822  
+- **Web Interface**: 172.22.18.12:8080
+- **Nginx Proxy**: 172.22.18.13:80,443
+
+## 🔧 Manual Configuration (Legacy Method)
+
+*For reference only - use automated scripts above for new deployments*
 
 ## Management Tools
 
