@@ -46,6 +46,12 @@ fi
 echo ""
 echo "Setting permissions for additional utility scripts:"
 
+# Debug and utility scripts
+if [[ -f "debug_scp.sh" ]]; then
+    chmod +x debug_scp.sh
+    echo "  debug_scp.sh              - SCP connection debugging and troubleshooting"
+fi
+
 # Find and set permissions for any other shell scripts
 find . -maxdepth 1 -name "*.sh" -not -name "00_Setup_Permissions.sh" -exec chmod +x {} \;
 
